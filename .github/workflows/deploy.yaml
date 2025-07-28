@@ -7,21 +7,30 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to Server via SSH
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout source code
       uses: actions/checkout@v4
 
-    - name: Setup SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 192.168.1.100 >> ~/.ssh/known_hosts
-      shell: bash
+    - name: Copy files via SSH
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "."
+        target: "/home/${{ secrets.SSH_USER }}/deploy-dir"
 
-    - name: Deploy to Server
-      run: |
-        ssh hadi@192.168.1.100 "echo '✅ اتصال موفق از طرف GitHub!'"
+    - name: Run remote command via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /home/${{ secrets.SSH_USER }}/deploy-dir
+          docker-compose down
+          docker-compose up -d --build
 
